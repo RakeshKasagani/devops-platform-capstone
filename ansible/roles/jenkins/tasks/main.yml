@@ -1,0 +1,66 @@
+- name: Update the APT package cache
+  apt:
+   update_cache: yes
+  become: true # Requires privilege escalation (sudo)
+
+- name: Install OpenJDK 21 on Debian/Ubuntu
+  apt:
+    name: openjdk-21-jdk
+    state: present
+
+- name: Download Jenkins GPG key
+  ansible.builtin.get_url:
+      url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+      dest: /usr/share/keyrings/jenkins-keyring.asc
+
+- name: Add Jenkins repository to apt sources
+  ansible.builtin.apt_repository:
+      repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+      state: present
+      filename: jenkins  
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: present   
+
+- name: Start and enable Jenkins service
+  service:
+      name: jenkins
+      state: started
+      enabled: true   
+
+- name: Slurp the initialAdminPassword file
+  ansible.builtin.slurp:
+    src: /var/lib/jenkins/secrets/initialAdminPassword
+  register: admin_password_file   
+
+- name: Set the actual admin password content as a fact (use with caution)
+  ansible.builtin.set_fact:
+    jenkins_admin_password: "{{ admin_password_file['content'] | b64decode | trim }}"
+        # Note: Be careful with sensitive data in facts; Ansible Vault might be better for storage
+
+- name: Display the actual admin password (for verification/debugging)
+  ansible.builtin.debug:
+    var: jenkins_admin_password  
+
+- name: Install python-jenkins library
+  apt:
+    name: python3-jenkins
+    state: present
+
+- name: install jenkins plugins
+  community.general.jenkins_plugin:
+    name: "{{ item }}"
+    url_username: admin
+    url_password: "{{ jenkins_admin_password }}"
+    state: present
+    timeout: 60
+  loop:
+    - git
+    - workflow-aggregator
+    - docker-workflow
+    - sonarqube
+    - nexus-artifact-uploader
+  notify: Restart Jenkins                      
+  
