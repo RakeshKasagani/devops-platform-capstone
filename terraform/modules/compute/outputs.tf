@@ -1,0 +1,19 @@
+output "jenkins_public_ip" {
+  value = aws_instance.jenkins.public_ip
+}
+
+output "sonarqube_public_ip" {
+  value = aws_instance.sonarqube.public_ip
+}
+
+output "nexus_public_ip" {
+  value = aws_instance.nexus.public_ip
+}
+
+output "docker_public_ip" {
+  value = aws_instance.docker.public_ip
+}
+# output "ansible_public_ip" {
+#   value =  aws_instance.ansible.public_ip
+
+# }
